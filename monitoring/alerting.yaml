@@ -1,0 +1,155 @@
+# Regles d'alerte, exportables et reimportables telles quelles.
+# Point de contact et identifiants de source de donnees a adapter.
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: 5m
+      folder: Homelab
+      interval: 5m
+      rules:
+        - title: Disque systeme presque plein
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange: { from: 600, to: 0 }
+              datasourceUid: <uid_prometheus>
+              model:
+                editorMode: code
+                expr: 100 * node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}
+                instant: true
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator: { params: [15], type: lt }
+                      reducer: { type: last }
+                expression: A
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 15m
+          annotations:
+            summary: 'Il reste moins de 15% sur le disque systeme. Verifier les sauvegardes (7 rotations) et les images Docker inutilisees : docker image prune -a'
+          notification_settings:
+            receiver: <point_de_contact>
+
+        - title: Volume de donnees presque plein
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange: { from: 600, to: 0 }
+              datasourceUid: <uid_prometheus>
+              model:
+                editorMode: code
+                expr: 100 * node_filesystem_avail_bytes{mountpoint="/mnt/data"} / node_filesystem_size_bytes{mountpoint="/mnt/data"}
+                instant: true
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator: { params: [10], type: lt }
+                      reducer: { type: last }
+                expression: A
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 15m
+          annotations:
+            summary: 'Il reste moins de 10% sur le volume de donnees (/mnt/data). Identifier les repertoires les plus volumineux avec ncdu.'
+          notification_settings:
+            receiver: <point_de_contact>
+
+        - title: Temperature CPU elevee
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange: { from: 600, to: 0 }
+              datasourceUid: <uid_prometheus>
+              model:
+                editorMode: code
+                expr: max(node_hwmon_temp_celsius{chip=~".*coretemp.*"})
+                instant: true
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator: { params: [85], type: gt }
+                      reducer: { type: last }
+                expression: A
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 5m
+          annotations:
+            summary: 'Processeur au-dessus de 85 C pendant 5 minutes. Si aucune tache lourde en cours, verifier ventilation et poussiere. Reference au repos : 46 C.'
+          notification_settings:
+            receiver: <point_de_contact>
+
+        - title: Memoire disponible faible
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange: { from: 600, to: 0 }
+              datasourceUid: <uid_prometheus>
+              model:
+                editorMode: code
+                expr: 100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+                instant: true
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator: { params: [10], type: lt }
+                      reducer: { type: last }
+                expression: A
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 10m
+          annotations:
+            summary: 'Moins de 10% de memoire disponible. Suspecter une fuite : consulter la rangee memory du tableau de bord conteneurs pour identifier lequel. Reference : 77% disponible.'
+          notification_settings:
+            receiver: <point_de_contact>
+
+        - title: Un conteneur est tombe
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange: { from: 600, to: 0 }
+              datasourceUid: <uid_prometheus>
+              model:
+                editorMode: code
+                expr: count(container_last_seen{name!=""})
+                instant: true
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    # Seuil en dur : a ajuster apres tout ajout ou retrait
+                    # de service, sans quoi la regle ne se declenche plus jamais.
+                    - evaluator: { params: [28], type: lt }
+                      reducer: { type: last }
+                expression: A
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 5m
+          annotations:
+            summary: 'Moins de 28 conteneurs actifs. Lancer docker ps -a --filter status=exited pour identifier lequel. Ajuster le seuil de cette regle apres tout ajout ou retrait de service.'
+          notification_settings:
+            receiver: <point_de_contact>

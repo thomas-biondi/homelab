@@ -1,0 +1,26 @@
+# /etc/systemd/system/docker-user-rules.service
+#
+# Regles de filtrage appliquees dans la chaine DOCKER-USER.
+# L'ordonnancement After=docker.service est la raison d'etre de cette unite :
+# la chaine n'existe pas tant que Docker n'a pas demarre, et toute tentative
+# de l'ecrire plus tot echoue silencieusement.
+
+[Unit]
+Description=Regles de filtrage DOCKER-USER
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# La regle de suivi de connexions doit rester en position 1 : placee apres
+# le DROP, elle couperait tout le trafic sortant des conteneurs.
+ExecStart=/sbin/iptables -I DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+ExecStart=/sbin/iptables -A DOCKER-USER -s 192.168.1.0/24 -j RETURN
+# 100.64.0.0/10 : plage CGNAT utilisee par le reseau prive maille.
+ExecStart=/sbin/iptables -A DOCKER-USER -s 100.64.0.0/10 -j RETURN
+ExecStart=/sbin/iptables -A DOCKER-USER -i <interface> -j DROP
+
+[Install]
+WantedBy=multi-user.target

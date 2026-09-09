@@ -1,0 +1,22 @@
+# Coffre-fort de mots de passe auto-heberge.
+# Aucun port publie sur l'hote : l'acces passe uniquement par le reverse proxy.
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      # Doit correspondre exactement a l'URL servie par le reverse proxy,
+      # sans quoi l'enregistrement des cles de securite echoue.
+      - DOMAIN=https://vault.home.arpa
+      # Inscription fermee apres creation du premier compte.
+      - SIGNUPS_ALLOWED=false
+    volumes:
+      - ./data:/data
+    networks:
+      - proxy
+
+networks:
+  # Reseau partage avec le reverse proxy, cree en dehors de ce fichier.
+  proxy:
+    external: true

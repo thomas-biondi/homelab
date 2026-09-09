@@ -1,0 +1,72 @@
+# Pile de supervision : collecte, exportateurs et visualisation.
+# Seuls Prometheus et Grafana rejoignent le reseau du reverse proxy ;
+# les exportateurs restent sur un reseau interne non expose.
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    user: "1000:1000"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      # Retention explicite : sans elle, la base grossit sans limite.
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - proxy
+      - monitoring
+
+  # Limite connue : en mode bridge, cet exportateur lit les statistiques
+  # reseau de son propre espace de noms. Les metriques reseau remontees ne
+  # sont donc pas celles de l'hote. Correction : network_mode: host, avec
+  # adaptation de la cible dans prometheus.yml.
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.systemd'
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - monitoring
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    user: "472:472"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SERVER_ROOT_URL=https://grafana.home.arpa
+    networks:
+      - proxy
+      - monitoring
+
+networks:
+  proxy:
+    external: true
+  monitoring:
+    driver: bridge

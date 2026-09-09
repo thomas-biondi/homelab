@@ -1,0 +1,50 @@
+# Cloud personnel : application, base PostgreSQL et cache Redis.
+# Les mots de passe sont lus depuis un fichier .env non versionne.
+services:
+  db:
+    image: postgres:16
+    container_name: nextcloud-db
+    restart: unless-stopped
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  redis:
+    image: redis:7
+    container_name: nextcloud-redis
+    restart: unless-stopped
+
+  app:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./html:/var/www/html
+      # Les donnees utilisateur vivent sur le volume dedie, pas dans le conteneur.
+      - /mnt/data/nextcloud:/var/www/html/data
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      # Deux noms declares : celui du reverse proxy et celui du conteneur.
+      # Sans le second, les appels internes sont refuses par la validation
+      # d'en-tete Host (piege rencontre sur trois applications du projet).
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.home.arpa nextcloud
+      OVERWRITEPROTOCOL: https
+      PHP_MEMORY_LIMIT: 1G
+      PHP_UPLOAD_LIMIT: 10G
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
