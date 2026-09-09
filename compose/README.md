@@ -1,30 +1,30 @@
-# Definitions de services
+# Définitions de services
 
 Un dossier par service, chacun avec son `docker-compose.yml`. Les fichiers sont
-expurges : les mots de passe sont remplaces par des references a un fichier
-`.env` non versionne, dont un modele est fourni dans `.env.example`.
+expurges : les mots de passe sont remplaces par des références a un fichier
+`.env` non versionne, dont un modèle est fourni dans `.env.example`.
 
-Trois exemples representatifs sont publies plutot que l'integralite de la pile :
+Trois exemples représentatifs sont publies plutôt que l'intégralité  de la pile :
 
-| Dossier | Interet |
+| Dossier | Intérêt |
 |---|---|
 | `vaultwarden/` | Service simple, sans base, expose uniquement via le reverse proxy |
-| `nextcloud/` | Service avec base PostgreSQL et cache, donnees sur volume dedie |
-| `monitoring/` | Pile multi-conteneurs avec cloisonnement reseau explicite |
+| `nextcloud/` | Service avec base PostgreSQL et cache, données sur volume dédie |
+| `monitoring/` | Pile multi-conteneurs avec cloisonnement réseau explicite |
 
 ## Choix communs
 
-**Aucun port publie sur l'hote** pour les services applicatifs. L'acces passe par
-le reverse proxy, qui est le seul a exposer 80 et 443. Cela evite la situation ou
-un service reste joignable en direct malgre le pare-feu (voir `firewall/`).
+**Aucun port publie sur l’hôte** pour les services applicatifs. L’accès passe par
+le reverse proxy, qui est le seul a exposer 80 et 443. Cela évite la situation ou
+un service reste joignable en direct malgré le pare-feu (voir `firewall/`).
 
-**Reseau `proxy` externe.** Il est cree une fois en dehors des fichiers compose et
-partage par tous les services qui doivent etre publies. Docker Compose cree sinon
-un reseau par projet, et deux services de dossiers differents ne se voient pas.
+**Réseau `proxy` externe.** Il est créé une fois en dehors des fichiers compose et
+partage par tous les services qui doivent être publies. Docker Compose crée sinon
+un reseau par projet, et deux services de dossiers différents ne se voient pas.
 
-**`restart: unless-stopped` systematique.** Un incident reel a montre qu'un seul
-conteneur depourvu de cette directive ne remonte pas apres une coupure de courant,
-et que l'ecart peut passer inapercu plusieurs heures. Audit rapide de l'ensemble :
+**`restart: unless-stopped` systématique.** Un incident réel a montre qu'un seul
+conteneur dépourvu de cette directive ne remonte pas après une coupure de courant,
+et que l’écart peut passer inaperçu plusieurs heures. Audit rapide de l'ensemble :
 
 ```bash
 docker inspect $(docker ps -aq) \
@@ -32,6 +32,6 @@ docker inspect $(docker ps -aq) \
   | grep -v unless-stopped
 ```
 
-**`container_name` explicite.** Sans lui, Docker prefixe le nom par celui du
-projet, et les references croisees (requetes PromQL, sondes de disponibilite,
-hotes du reverse proxy) ne designent plus les memes identifiants.
+**`container_name` explicite.** Sans lui, Docker préfixe le nom par celui du
+projet, et les references croisees (requetes PromQL, sondes de disponibilité,
+hôtes du reverse proxy) ne désignent plus les mêmes identifiants.
