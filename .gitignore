@@ -1,60 +1,15 @@
-# --- Journal de bord d'origine ---
-journal*
-notes-privees*
-*-prive.*
-*-private.*
-brouillon*
-
-# --- Secrets et variables d'environnement ---
+# Secrets et valeurs propres a l'installation
 .env
-.env.*
-!.env.example
-*.env
-secrets/
-secrets.*
-credentials*
-
-# --- Clés et certificats ---
 *.key
 *.pem
-*.p12
-*.pfx
 *.crt
-*.cer
-*.csr
-id_rsa*
-id_ed25519*
-*.kdbx
 
-# --- Configurations réelles ---
-docker-compose.override.yml
-*.conf
-*.cfg
-!*.example.conf
-!*.conf.example
+# Donnees applicatives et volumes
+data/
+pgdata/
+html/
+grafana/
+prometheus/data/
 
-# --- Sauvegardes et exports de bases ---
-*.sql
-*.dump
-*.bak
-backups/
-dumps/
-
-# --- Configuration réseau exportée ---
-running-config*
-startup-config*
-vlan.dat
-*.pcap
-*.pcapng
-
-# --- Journaux ---
+# Journaux
 *.log
-logs/
-
-# --- Divers ---
-.DS_Store
-Thumbs.db
-*.swp
-*~
-.vscode/
-.idea/
