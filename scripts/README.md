@@ -1,6 +1,6 @@
 # Sauvegarde et restauration
 
-`backup-docker.sh` s'execute chaque nuit par cron :
+`backup-docker.sh` s'exécute chaque nuit par cron :
 
 ```
 0 3 * * * /home/<user>/backup-docker.sh >> /var/log/backup-docker.log 2>&1
@@ -8,34 +8,34 @@
 
 ## Ce qui est couvert, et ce qui ne l'est pas
 
-Couvert : l'integralite de `~/docker` (configurations et bases SQLite), les
-donnees applicatives sur le volume dedie, et les exports PostgreSQL.
+Couvert : l'intégralité de `~/docker` (configurations et bases SQLite), les
+données applicatives sur le volume dédié, et les exports PostgreSQL.
 
-Non couvert : la mediatheque, volumineuse et remplacable. Une sauvegarde qui
+Non couvert : la médiathèque, volumineuse et remplaçable. Une sauvegarde qui
 inclut tout est une sauvegarde qu'on ne restaure jamais.
 
-## Trois decisions de conception
+## Trois décisions de conception
 
 **Exports avant synchronisation.** Copier les fichiers d'une base en cours
-d'ecriture produit un etat incoherent qui ne se restaure pas. Le script passe
-donc par `pg_dump`, et la synchronisation exclut explicitement les repertoires
-de donnees PostgreSQL.
+d'écriture produit un état incohérent qui ne se restaure pas. Le script passe
+donc par `pg_dump`, et la synchronisation exclut explicitement les répertoires
+de données PostgreSQL.
 
 **Rotation par liens durs.** `rsync --link-dest` ne duplique que les fichiers
-modifies. Sept rotations occupent environ 9 Go au lieu de 30. Corollaire a
-connaitre : ces sauvegardes sont physiquement interdependantes, une corruption
-du systeme de fichiers peut en affecter plusieurs a la fois.
+modifiés. Sept rotations occupent environ 9 Go au lieu de 30. Corollaire à
+connaître : ces sauvegardes sont physiquement interdépendantes, une corruption
+du système de fichiers peut en affecter plusieurs à la fois.
 
-**Verification du montage.** Le script s'arrete si le volume de donnees n'est
-pas monte, plutot que de synchroniser des dossiers vides par-dessus l'historique.
+**Vérification du montage.** Le script s'arrête si le volume de données n'est
+pas monté, plutôt que de synchroniser des dossiers vides par-dessus l'historique.
 
 ## Test de restauration
 
-Une sauvegarde jamais restauree est une hypothese. La verification se fait en
-trois niveaux, sans jamais toucher a la production.
+Une sauvegarde jamais restaurée est une hypothèse. La vérification se fait en
+trois niveaux, sans jamais toucher à la production.
 
-**1. Integrite de l'export.** Un dump PostgreSQL valide se termine par une ligne
-explicite de fin. C'est le controle decisif : il prouve que l'export n'a pas ete
+**1. Intégrité de l'export.** Un dump PostgreSQL valide se termine par une ligne
+explicite de fin. C'est le contrôle décisif : il prouve que l'export n'a pas été
 interrompu.
 
 ```bash
@@ -43,7 +43,7 @@ sudo tail -5 ~/backups/latest/nextcloud-dump/nextcloud-db.sql
 sudo grep -c "CREATE TABLE" ~/backups/latest/nextcloud-dump/nextcloud-db.sql
 ```
 
-**2. Restauration reelle dans une base jetable.**
+**2. Restauration réelle dans une base jetable.**
 
 ```bash
 docker exec -it nextcloud-db psql -U <user> -d postgres \
@@ -60,24 +60,24 @@ docker exec -it nextcloud-db psql -U <user> -d postgres \
   -c "DROP DATABASE test_restore;"
 ```
 
-Deux pieges : `psql` sans option `-d` tente de se connecter a une base portant le
-nom de l'utilisateur, il faut donc toujours preciser une base d'entree existante.
-Et relancer l'import sur une base deja peuplee produit des centaines d'erreurs
-`already exists` qui ne signalent pas un export defectueux mais une restauration
+Deux pièges : `psql` sans option `-d` tente de se connecter à une base portant le
+nom de l'utilisateur, il faut donc toujours préciser une base d'entrée existante.
+Et relancer l'import sur une base déjà peuplée produit des centaines d'erreurs
+`already exists` qui ne signalent pas un export défectueux mais une restauration
 en double. Seule une restauration sur base vierge est probante.
 
-**3. Integrite des fichiers.** Une base restauree sans les documents ne sert a
-rien. Un controle de structure confirme que le contenu est exploitable, et pas
-seulement present avec la bonne taille.
+**3. Intégrité des fichiers.** Une base restaurée sans les documents ne sert à
+rien. Un contrôle de structure confirme que le contenu est exploitable, et pas
+seulement présent avec la bonne taille.
 
 ```bash
 sudo find ~/backups/latest/nextcloud-data -type f | wc -l
 sudo file $(sudo find ~/backups/latest/paperless-data -name "*.pdf" | head -1)
 ```
 
-## Limite assumee
+## Limite assumée
 
-Les sauvegardes vivent sur le meme serveur que les donnees. Le dispositif protege
+Les sauvegardes vivent sur le même serveur que les données. Le dispositif protège
 contre l'erreur humaine, la corruption logicielle et la panne d'un service ; il ne
-protege ni de l'incendie, ni du vol, ni d'un rancongiciel. La regle 3-2-1 n'est
-satisfaite qu'a moitie.
+protège ni de l'incendie, ni du vol, ni d'un rançongiciel. La règle 3-2-1 n'est
+satisfaite qu'à moitié.
