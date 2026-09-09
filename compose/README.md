@@ -33,5 +33,5 @@ docker inspect $(docker ps -aq) \
 ```
 
 **`container_name` explicite.** Sans lui, Docker préfixe le nom par celui du
-projet, et les references croisees (requetes PromQL, sondes de disponibilité,
+projet, et les références croisées (requetes PromQL, sondes de disponibilité,
 hôtes du reverse proxy) ne désignent plus les mêmes identifiants.
